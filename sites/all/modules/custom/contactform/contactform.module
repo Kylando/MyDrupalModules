@@ -1,0 +1,253 @@
+<?php
+
+/**
+* Implementation of hook_permission().
+*/
+function contactform_permission() {
+  return array(
+  // 'access helloworld' => array(
+  //   'title' => t('Access helloworld'),
+  //   'description' => t('Afficher Hello World'),
+  //   ),
+  'use contactform' => array(
+    'title' => t('Use and submit contact form.'),
+    'description' => t('Use and submit contact form.'),
+    ),
+  'access contactform list' => array(
+    'title' => t('Access helloworld submissions'),
+    'description' => t('Access the hello world submissions'),
+    ),
+  );
+}
+
+
+
+/**
+ * Implementation of hook_menu().
+ */
+
+function contactform_menu() {
+    $items = array();
+
+    // $items['helloworld/hello_world'] = array(
+    //     'title' => 'Hello World Test',
+    //     'page callback' => 'say_hello_world',
+    //     'access arguments' => array('access helloworld'),
+    //     'type' => MENU_CALLBACK,
+    //     );
+
+    $items['contactform/formulaire'] = array(
+        'title' => t('Contact us'),
+        'type' => MENU_NORMAL_ITEM,
+        'access arguments' => array('use contactform'),
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('contactform_form'),
+        );
+
+    $items['contactform/result'] = array(
+        'title' => t('Contactform Submissions'),
+        'type' => MENU_NORMAL_ITEM,
+        'access arguments' => array('access contactform list'),
+        'page callback' => 'contactform_submissions'
+        );
+
+    $items['contactform/message/%/edit'] = array(
+        'title' => t('Contactform Message'),
+        'type' => MENU_NORMAL_ITEM,
+        'access arguments' => array('access contactform list'),
+        'page callback' => 'contactform_message_edit',
+        'page arguments' => array(2),
+        );
+
+    return $items;
+
+}
+/**
+ * Function of my Hello page
+ */
+// function say_hello_world() {
+//   global $user;
+//   $current_uid = $user->uid;
+
+//   $query = db_select('users', 'u');
+
+//   $query->condition('u.uid', $current_uid, '=');
+//   $query->fields('u', array( 'name'));
+
+//   $result = $query->execute();
+//   foreach ($result as $res) {
+//     $current_name[] = $res->name;
+//   }
+
+//   $vars = 'Hello ' . ucfirst($current_name[0]) . '!';
+
+
+//   return $vars;
+// }
+
+/**
+ * My Contactform Form
+ */
+function contactform_form() {
+  $form['gender'] = array(
+    '#type' => 'radios',
+    '#title' => t('Gender'),
+    '#default_value' => 'Monsieur',
+    '#options' => array('Monsieur' => t('Monsieur'), 'Madame' => t('Madame'), 'Mademoiselle' => t('Mademoiselle')),
+    '#description' => t('Select your gender.'),
+    );
+
+  $form['name'] = array(
+    '#title' => t('Your name'),
+    '#type' => 'textfield',
+    '#default_value' => '',
+    '#required' => TRUE,
+    );
+
+  $form['first_name'] = array(
+    '#title' => t('Your First name'),
+    '#type' => 'textfield',
+    '#default_value' => '',
+    '#required' => TRUE,
+    );
+
+  $form['email'] = array(
+    '#title' => t('Your E-mail adress'),
+    '#type' => 'textfield',
+    '#default_value' => '',
+    '#required' => TRUE,
+    );
+
+  $form['message'] = array(
+    '#title' => t('Your message'),
+    '#type' => 'textarea',
+    '#description' => t('Please write your message.'),
+    '#default_value' => '',
+    '#required' => TRUE,
+    );
+
+  $form['valider'] = array(
+    '#type' => 'submit',
+    '#value' => t('Valider'),
+    );
+  return $form;
+}
+
+/**
+ * Validation handler for my Contactform Form
+ */
+function contactform_form_validate($form, &$form_state) {
+  dpm($form_state['values'], '$form_state');
+  //Flag
+  $error = FALSE;
+
+  //Validate every field of the form
+  if(!valid_email_address($form_state['values']['email'])) {
+    form_set_error(t('Your email adress'), t('You must enter a valid email adress.'));
+      $error = TRUE;
+  }
+
+  if(empty($form_state['values']['name'])) {
+    form_set_error(t('Your name'), t('You must enter a valid name.'));
+    $error = TRUE;
+  }
+
+  if(empty($form_state['values']['first_name'])) {
+    form_set_error(t('Your First name'), t('You must enter a valid  First name.'));
+    $error = TRUE;
+  }
+
+  //Return FALSE if error
+  if($error = TRUE) {
+    return FALSE;
+  }
+  else {
+    drupal_set_message ('Bonjour ' . $form_state['values']['name'] . '!');
+    return TRUE;
+  }
+
+}
+
+function contactform_form_submit($form, &$form_state) {
+  $contactform_insert = db_insert('contactform_field')
+  -> fields(array(
+    'send' => time(),
+    'gender' => $form_state['values']['gender'],
+    'name' => $form_state['values']['name'],
+    'firstname' => $form_state['values']['first_name'],
+    'email' => $form_state['values']['email'],
+    'message' => $form_state['values']['message'],
+
+    ))
+  ->execute();
+
+
+drupal_set_message(t('Your message has been sent to the administrator. He will answer you soon.'));
+}
+
+/**
+ * View Contactform Submissions.
+ */
+function contactform_submissions() {
+  // $results = db_query("SELECT cid, gender, firstname, name, email, message FROM {contactform_field}");
+
+  $query = db_select('contactform_field', 'cf');
+  $query
+    ->fields('cf', array('cid', 'send', 'gender', 'firstname', 'name', 'email', 'message'))
+    ->range(0,50)
+    ->orderBy('cf.cid');
+  $results = $query->execute();
+
+  $header = array(t('CID'), t('send'), t('gender'), t('Firstame'), t('Name'), t('E-mail'), t('Message'), t('Read the message'));
+  $rows = array();
+
+  foreach ($results as $result) {
+    $rows[]=array(
+      check_plain($result->cid),
+      check_plain($result->send),
+      check_markup($result->gender),
+      check_markup($result->firstname),
+      check_markup($result->name),
+      check_markup($result->email),
+      check_markup(text_summary($result->message, NULL, 80) . '...'),
+      '<button><a href="/contactform/message/'. $result->cid . '/edit">Lire le message</a></button>',
+    );
+  }
+  return theme('table', array('header'=>$header, 'rows' => $rows));
+}
+
+function contactform_message_edit($contactform_id) {
+  $rows = array();
+  $menu_items = array();
+
+  $resultats = db_query("SELECT cid, send, gender, firstname, name, email, message FROM {contactform_field} WHERE cid = $contactform_id");
+
+  foreach ($resultats as $result) {
+     $menu_items['items'] = array(l('Retour à la boite de réception', 'contactform/result'),
+      l('Répondre', 'mailto:' . $result->email, array('attributes' => array('target'=>'_blank')))
+    );
+      $rows['cid'] = $result->cid;
+      $rows['date'] = date(' j M Y', $result->send);
+      $rows['hour'] = date('H:i:s', $result->send);
+      $rows['gender'] = $result->gender;
+      $rows['firstname']= $result->firstname;
+      $rows['name'] = $result->name;
+      $rows['email'] = $result->email;
+      $rows['message'] = $result->message;
+  }
+
+
+  $rows['menu_email'] = theme('item_list', $menu_items);
+  dpm($rows, '$rows');
+  dpm($menu_items, '$menu_items');
+  return theme('contactform', $rows);
+}
+
+function contactform_theme() {
+  return array(
+    'contactform' => array(
+      'template' => 'contactform',
+      )
+    );
+}
+

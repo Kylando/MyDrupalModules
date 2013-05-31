@@ -1,0 +1,61 @@
+<?php
+
+/**
+ * Implementation of hook_schema().
+ */
+function contactform_schema() {
+  $schema['contactform_field'] = array(
+    'description' => t('Stores all the contact information.'),
+    'fields' => array(
+      'cid' => array(
+              'description' => t('The id of the contact message.'),
+              'type' => 'serial',
+              'unsigned' => TRUE,
+              'not null' => TRUE,
+              ),
+      'send'=> array(
+              'description' => t('The timestamp the message was sent'),
+              'type' => 'int',
+              'not null' => TRUE,
+              'default' => 0,
+              ),
+      'gender' => array(
+              'description' => t('The contact gender.'),
+              'type' => 'varchar',
+              'length' => 15,
+              'not null' => TRUE,
+              'default' => 'Monsieur',
+              ),
+      'firstname' => array(
+              'description' => t('The contact firstname.'),
+              'type' => 'varchar',
+              'length' => 255,
+              'not null' => TRUE,
+              'default' => '',
+              ),
+      'name' => array(
+              'description' => t('The contact name.'),
+              'type' => 'varchar',
+              'length' => 255,
+              'not null' => TRUE,
+              'default' => '',
+              ),
+      'email' => array(
+              'description' => t('The contact email.'),
+              'type' => 'varchar',
+              'length' => 255,
+              'not null' => TRUE,
+              'default' => '',
+              ),
+      'message' => array(
+              'description' => t('The message.'),
+              'type' => 'text',
+              'not null' => TRUE,
+              ),
+      ),
+      'primary key' => array('cid'),
+  );
+
+  return $schema;
+}
+
